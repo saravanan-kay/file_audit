@@ -1,0 +1,275 @@
+{% extends 'auditor/base.html' %}
+
+{% block title %}{{ file.original_filename }} - File Audit System{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">{{ file.original_filename }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>File Information</h2>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 30%;">Filename</th>
+                        <td>{{ file.original_filename }}</td>
+                    </tr>
+                    <tr>
+                        <th>File Type</th>
+                        <td>{{ file.get_file_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>File Size</th>
+                        <td>{{ file.file_size|filesizeformat }}</td>
+                    </tr>
+                    <tr>
+                        <th>SHA256 Hash</th>
+                        <td><code>{{ file.sha256_hash }}</code></td>
+                    </tr>
+                    {% if file.perceptual_hash %}
+                    <tr>
+                        <th>Perceptual Hash</th>
+                        <td><code>{{ file.perceptual_hash }}</code></td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Uploaded By</th>
+                        <td>{{ file.user.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>Uploaded At</th>
+                        <td>{{ file.uploaded_at|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Analyzed At</th>
+                        <td>{{ file.analyzed_at|date:"Y-m-d H:i:s"|default:"Not analyzed" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Integrity Status</th>
+                        <td>
+                            <strong class="status-{{ file.integrity_status }}">
+                                {{ file.get_integrity_status_display }}
+                            </strong>
+                        </td>
+                    </tr>
+                </table>
+                
+                {% if file.file_type == 'image' %}
+                <div class="text-center mt-3">
+                    <img src="{{ file.file.url }}" alt="{{ file.original_filename }}" 
+                         class="img-fluid" style="max-height: 400px;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if audit_report %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Audit Report</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-{% if audit_report.confidence_score >= 80 %}success{% elif audit_report.confidence_score >= 50 %}warning{% else %}danger{% endif %}">
+                    <h5>Detection Summary</h5>
+                    <p class="mb-1">{{ audit_report.detection_summary }}</p>
+                    <p class="mb-0"><strong>Confidence Score: {{ audit_report.confidence_score }}%</strong></p>
+                </div>
+                
+                {% if file.file_type == 'image' %}
+                <h5>Image Analysis</h5>
+                <table class="table table-sm">
+                    <tr>
+                        <th style="width: 40%;">Has EXIF Data</th>
+                        <td>{% if audit_report.has_exif %}Yes{% else %}No{% endif %}</td>
+                    </tr>
+                    {% if audit_report.exif_software %}
+                    <tr>
+                        <th>Software Used</th>
+                        <td>{{ audit_report.exif_software }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if audit_report.exif_datetime_original %}
+                    <tr>
+                        <th>DateTime Original</th>
+                        <td>{{ audit_report.exif_datetime_original }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if audit_report.exif_datetime_modified %}
+                    <tr>
+                        <th>DateTime Modified</th>
+                        <td>{{ audit_report.exif_datetime_modified }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Metadata Mismatch</th>
+                        <td>
+                            {% if audit_report.metadata_mismatch %}
+                                <span class="text-danger">Yes</span>
+                            {% else %}
+                                <span class="text-success">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Suspicious Software</th>
+                        <td>
+                            {% if audit_report.suspicious_software %}
+                                <span class="text-danger">Yes</span>
+                            {% else %}
+                                <span class="text-success">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if audit_report.exif_anomalies %}
+                    <tr>
+                        <th>Anomalies Detected</th>
+                        <td>
+                            <pre class="mb-0">{{ audit_report.exif_anomalies }}</pre>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+                {% endif %}
+                
+                {% if file.file_type == 'pdf' %}
+                <h5>PDF Analysis</h5>
+                <table class="table table-sm">
+                    {% if audit_report.pdf_creator %}
+                    <tr>
+                        <th style="width: 40%;">Creator</th>
+                        <td>{{ audit_report.pdf_creator }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if audit_report.pdf_producer %}
+                    <tr>
+                        <th>Producer</th>
+                        <td>{{ audit_report.pdf_producer }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if audit_report.pdf_creation_date %}
+                    <tr>
+                        <th>Creation Date</th>
+                        <td>{{ audit_report.pdf_creation_date }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if audit_report.pdf_modification_date %}
+                    <tr>
+                        <th>Modification Date</th>
+                        <td>{{ audit_report.pdf_modification_date }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if audit_report.pdf_page_count %}
+                    <tr>
+                        <th>Page Count</th>
+                        <td>{{ audit_report.pdf_page_count }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Metadata Mismatch</th>
+                        <td>
+                            {% if audit_report.metadata_mismatch %}
+                                <span class="text-danger">Yes</span>
+                            {% else %}
+                                <span class="text-success">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Suspicious Software</th>
+                        <td>
+                            {% if audit_report.suspicious_software %}
+                                <span class="text-danger">Yes</span>
+                            {% else %}
+                                <span class="text-success">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if audit_report.pdf_anomalies %}
+                    <tr>
+                        <th>Anomalies Detected</th>
+                        <td>
+                            <pre class="mb-0">{{ audit_report.pdf_anomalies }}</pre>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+                {% endif %}
+                
+                <p class="text-muted mb-0">
+                    <small>Report generated: {{ audit_report.created_at|date:"Y-m-d H:i:s" }}</small>
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if file.reviewed_by %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5>Admin Review</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Reviewed By:</strong> {{ file.reviewed_by.username }}</p>
+                <p><strong>Review Date:</strong> {{ file.reviewed_at|date:"Y-m-d H:i:s" }}</p>
+                {% if file.admin_notes %}
+                <p><strong>Notes:</strong></p>
+                <p>{{ file.admin_notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ file.file.url }}" class="btn btn-primary" download>
+                        Download File
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        Back to Dashboard
+                    </a>
+                    <a href="{% url 'delete_file' file.pk %}" class="btn btn-danger">
+                        Delete File
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Status:</strong> 
+                    <span class="status-{{ file.integrity_status }}">
+                        {{ file.get_integrity_status_display }}
+                    </span>
+                </p>
+                {% if audit_report %}
+                <p><strong>Confidence:</strong> {{ audit_report.confidence_score }}%</p>
+                <div class="progress">
+                    <div class="progress-bar 
+                        {% if audit_report.confidence_score >= 80 %}bg-success
+                        {% elif audit_report.confidence_score >= 50 %}bg-warning
+                        {% else %}bg-danger{% endif %}"
+                        style="width: {{ audit_report.confidence_score }}%">
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

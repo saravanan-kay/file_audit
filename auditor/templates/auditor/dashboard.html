@@ -1,0 +1,111 @@
+{% extends 'auditor/base.html' %}
+
+{% block title %}Dashboard - File Audit System{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">My Dashboard</h1>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Files</h5>
+                <p class="card-text display-4">{{ total_files }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Clean Files</h5>
+                <p class="card-text display-4">{{ clean_files }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Suspicious</h5>
+                <p class="card-text display-4">{{ suspicious_files }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">Modified</h5>
+                <p class="card-text display-4">{{ modified_files }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Uploaded Files</h2>
+    <a href="{% url 'upload_file' %}" class="btn btn-primary">Upload New File</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in page_obj %}
+            <tr>
+                <td>{{ file.original_filename }}</td>
+                <td>{{ file.get_file_type_display }}</td>
+                <td>{{ file.file_size|filesizeformat }}</td>
+                <td>
+                    <span class="status-{{ file.integrity_status }}">
+                        {{ file.get_integrity_status_display }}
+                    </span>
+                </td>
+                <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
+                <td>
+                    <a href="{% url 'file_detail' file.pk %}" class="btn btn-sm btn-info">View</a>
+                    <a href="{% url 'delete_file' file.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">No files uploaded yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
