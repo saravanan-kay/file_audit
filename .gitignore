@@ -1,6 +1,33 @@
+# Create .gitignore file
+touch .gitignore
+```
+
+Add Python-specific ignores to `.gitignore`:
+```
+# Python
 __pycache__/
-*.pyc
-*.log
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
 .env
-db.sqlite3
-/static/
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
