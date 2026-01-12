@@ -30,7 +30,7 @@
                         <th>File Size</th>
                         <td>{{ file.file_size|filesizeformat }}</td>
                     </tr>
-                    <tr>
+                     <tr>
                         <th>SHA256 Hash</th>
                         <td><code>{{ file.sha256_hash }}</code></td>
                     </tr>
@@ -39,7 +39,7 @@
                         <th>Perceptual Hash</th>
                         <td><code>{{ file.perceptual_hash }}</code></td>
                     </tr>
-                    {% endif %}
+                   {% endif %}
                     <tr>
                         <th>Uploaded By</th>
                         <td>{{ file.user.username }}</td>

@@ -3,6 +3,9 @@ from django.utils.html import format_html
 from django.utils import timezone
 from .models import UploadedFile, AuditReport
 
+admin.site.site_title = 'Lorven File Audit System'
+admin.site.site_header = 'ADMIN'
+admin.site.index_title = 'Lorven File Audit System'
 
 @admin.register(UploadedFile)
 class UploadedFileAdmin(admin.ModelAdmin):
@@ -15,7 +18,7 @@ class UploadedFileAdmin(admin.ModelAdmin):
         'uploaded_at',
         'reviewed_status'
     ]
-    list_filter = ['file_type', 'integrity_status', 'uploaded_at', 'reviewed_by']
+    list_filter = ['file_type', 'integrity_status', 'uploaded_at', 'reviewed_by', 'user__username']
     search_fields = ['original_filename', 'user__username', 'sha256_hash']
     readonly_fields = [
         'sha256_hash', 

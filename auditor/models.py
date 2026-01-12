@@ -27,7 +27,7 @@ class UploadedFile(models.Model):
     # Hash for integrity
     sha256_hash = models.CharField(
         max_length=64, 
-        unique=True,
+       # unique=True,
         blank=False,  # Don't allow blank
         null=False    # Don't allow null
     )
@@ -58,6 +58,12 @@ class UploadedFile(models.Model):
             models.Index(fields=['integrity_status']),
             models.Index(fields=['sha256_hash']),
         ]
+        constraints = [
+        models.UniqueConstraint(
+            fields=['user', 'sha256_hash'],
+            name='unique_file_per_user'
+        )]
+
     
     def __str__(self):
         return f"{self.original_filename} - {self.user.username}"

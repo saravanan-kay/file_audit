@@ -7,7 +7,20 @@ SECRET_KEY = 'django-insecure-change-this-in-production-xyz123'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    "flabbily-nonfungible-karina.ngrok-free.dev",
+    "localhost",
+    "127.0.0.1",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://flabbily-nonfungible-karina.ngrok-free.dev",
+]
+
+
+CSRF_TRUSTED_ORIGINS = ["https://flabbily-nonfungible-karina.ngrok-free.dev",]
+
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -87,29 +87,22 @@ import hashlib
 
 @login_required
 def upload_file(request):
+    """File upload and analysis view"""
     if request.method == 'POST':
         form = FileUploadForm(request.POST, request.FILES)
         if form.is_valid():
             uploaded_django_file = request.FILES['file']
 
-            # 1️⃣ Calculate SHA256
-            sha256 = hashlib.sha256()
+            # ✅ Compute SHA256 *before* saving (read once)
+            sha256_hash = hashlib.sha256()
             for chunk in uploaded_django_file.chunks():
-                sha256.update(chunk)
-            sha256_value = sha256.hexdigest()
+                sha256_hash.update(chunk)
+            sha256_value = sha256_hash.hexdigest()
+
+            # Reset pointer to beginning before saving file
             uploaded_django_file.seek(0)
 
-            # 2️⃣ Check duplicate PER USER (before saving)
-            existing_file = UploadedFile.objects.filter(
-                user=request.user,
-                sha256_hash=sha256_value
-            ).first()
-
-            if existing_file:
-                messages.warning(request, 'You already uploaded this file.')
-                return redirect('upload_file')
-
-            # 3️⃣ Create instance (not saved yet)
+            # ✅ Prepare model instance but don't save yet
             uploaded_file = form.save(commit=False)
             uploaded_file.user = request.user
             uploaded_file.original_filename = uploaded_django_file.name
@@ -123,30 +116,44 @@ def upload_file(request):
             elif ext == '.pdf':
                 uploaded_file.file_type = 'pdf'
             else:
-                messages.error(request, 'Unsupported file type.')
+                messages.error(request, 'Unsupported file type. Please upload JPEG, PNG, or PDF.')
                 return redirect('upload_file')
 
-            # 4️⃣ NOW save (safe)
+            # ✅ Save the file and metadata now
             uploaded_file.save()
 
-            # 5️⃣ Analyze
+            # Check for duplicate hash
+            duplicate = UploadedFile.objects.filter(
+                sha256_hash=uploaded_file.sha256_hash
+            ).exclude(id=uploaded_file.id).first()
+            if duplicate:
+                messages.warning(
+                    request,
+                    f'This file has been uploaded before by {duplicate.user.username} on {duplicate.uploaded_at}'
+                )
+                return redirect('upload_file')
+
+            # ✅ File analysis block
             try:
                 with transaction.atomic():
                     file_path = uploaded_file.file.path
 
+                    # Analyze based on file type
                     if uploaded_file.file_type == 'image':
                         analysis = FileAnalyzer.analyze_image(file_path)
                         uploaded_file.perceptual_hash = analysis['perceptual_hash']
                     else:
                         analysis = FileAnalyzer.analyze_pdf(file_path)
 
+                    # Integrity and audit fields
                     uploaded_file.integrity_status = FileAnalyzer.determine_integrity_status(
                         analysis['confidence_score']
                     )
                     uploaded_file.analyzed_at = timezone.now()
                     uploaded_file.save()
 
-                    AuditReport.objects.create(
+                    # Create audit report
+                    audit_report = AuditReport.objects.create(
                         uploaded_file=uploaded_file,
                         detection_summary=analysis['detection_summary'],
                         confidence_score=analysis['confidence_score'],
@@ -154,20 +161,37 @@ def upload_file(request):
                         suspicious_software=analysis.get('suspicious_software', False),
                     )
 
+                    # Image fields
+                    if uploaded_file.file_type == 'image':
+                        audit_report.has_exif = analysis.get('has_exif', False)
+                        audit_report.exif_software = analysis.get('exif_software', '')
+                        audit_report.exif_datetime_original = analysis.get('exif_datetime_original', '')
+                        audit_report.exif_datetime_modified = analysis.get('exif_datetime_modified', '')
+                        audit_report.exif_anomalies = analysis.get('exif_anomalies', '')
+
+                    # PDF fields
+                    if uploaded_file.file_type == 'pdf':
+                        audit_report.pdf_creator = analysis.get('pdf_creator', '')
+                        audit_report.pdf_producer = analysis.get('pdf_producer', '')
+                        audit_report.pdf_creation_date = analysis.get('pdf_creation_date', '')
+                        audit_report.pdf_modification_date = analysis.get('pdf_modification_date', '')
+                        audit_report.pdf_page_count = analysis.get('pdf_page_count', 0)
+                        audit_report.pdf_anomalies = analysis.get('pdf_anomalies', '')
+
+                    audit_report.save()
                     messages.success(request, 'File uploaded and analyzed successfully!')
                     return redirect('file_detail', pk=uploaded_file.pk)
 
             except Exception as e:
                 uploaded_file.integrity_status = 'error'
                 uploaded_file.save()
-                messages.error(request, f'Error analyzing file: {e}')
+                messages.error(request, f'Error analyzing file: {str(e)}')
                 return redirect('dashboard')
 
     else:
         form = FileUploadForm()
 
     return render(request, 'auditor/upload.html', {'form': form})
-
 
 
 
